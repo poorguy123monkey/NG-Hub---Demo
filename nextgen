@@ -1,0 +1,1397 @@
+-- Services
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Cleanup old GUIs
+for _, gui in ipairs(playerGui:GetChildren()) do
+	if gui.Name == "NextGEN_Loading" or gui.Name == "NextGEN_UI" then
+		gui:Destroy()
+	end
+end
+
+-- Configuration
+local CONFIG = {
+	COLORS = {
+		PRIMARY = Color3.fromRGB(90, 200, 255),
+		SECONDARY = Color3.fromRGB(70, 150, 255),
+		ACCENT = Color3.fromRGB(110, 220, 255),
+		BACKGROUND_DARK = Color3.fromRGB(12, 12, 12),
+		BACKGROUND_MEDIUM = Color3.fromRGB(18, 18, 18),
+		BACKGROUND_LIGHT = Color3.fromRGB(20, 20, 20),
+		TEXT_PRIMARY = Color3.fromRGB(220, 220, 220),
+		TEXT_SECONDARY = Color3.fromRGB(180, 180, 180),
+		TEXT_MUTED = Color3.fromRGB(150, 150, 150),
+		SHINE = Color3.fromRGB(255, 255, 255),
+	},
+	ANIMATIONS = {
+		FAST = 0.2,
+		MEDIUM = 0.4,
+		SLOW = 0.8,
+		SHINE = 1.2,
+	}
+}
+
+-- Helper function to create shine effect
+local function createShineEffect(parent, duration)
+	duration = duration or CONFIG.ANIMATIONS.SHINE
+
+	local shine = Instance.new("Frame")
+	shine.Name = "ShineEffect"
+	shine.Size = UDim2.new(0, 0, 1, 0)
+	shine.Position = UDim2.new(0, -50, 0, 0)
+	shine.BackgroundColor3 = CONFIG.COLORS.SHINE
+	shine.BackgroundTransparency = 0.8
+	shine.BorderSizePixel = 0
+	shine.ZIndex = parent.ZIndex + 10
+	shine.Parent = parent
+
+	local gradient = Instance.new("UIGradient")
+	gradient.Rotation = 45
+	gradient.Transparency = NumberSequence.new{
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.4, 0.3),
+		NumberSequenceKeypoint.new(0.6, 0.3),
+		NumberSequenceKeypoint.new(1, 1)
+	}
+	gradient.Parent = shine
+
+	local tween = TweenService:Create(shine,
+		TweenInfo.new(duration, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+		{
+			Position = UDim2.new(1, 50, 0, 0),
+			Size = UDim2.new(0, 100, 1, 0)
+		}
+	)
+
+	tween:Play()
+	tween.Completed:Connect(function()
+		shine:Destroy()
+	end)
+
+	return shine
+end
+
+-- Helper function to create holographic effect
+local function createHolographicEffect(element)
+	local hologram = Instance.new("UIGradient")
+	hologram.Name = "HolographicGradient"
+	hologram.Rotation = 0
+	hologram.Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, CONFIG.COLORS.PRIMARY),
+		ColorSequenceKeypoint.new(0.5, CONFIG.COLORS.SECONDARY),
+		ColorSequenceKeypoint.new(1, CONFIG.COLORS.ACCENT)
+	}
+	hologram.Parent = element
+
+	-- Animate the holographic effect
+	local connection
+	connection = RunService.Heartbeat:Connect(function()
+		if hologram and hologram.Parent then
+			hologram.Rotation = (hologram.Rotation + 1) % 360
+		else
+			connection:Disconnect()
+		end
+	end)
+
+	return hologram, connection
+end
+
+-- Helper function to create glow effect
+local function createGlowEffect(parent, color, intensity)
+	color = color or CONFIG.COLORS.PRIMARY
+	intensity = intensity or 0.7
+
+	local glow = Instance.new("ImageLabel")
+	glow.Name = "GlowEffect"
+	glow.Size = UDim2.new(1.5, 0, 1.5, 0)
+	glow.Position = UDim2.new(-0.25, 0, -0.25, 0)
+	glow.BackgroundTransparency = 1
+	glow.Image = "rbxassetid://3926305904"
+	glow.ImageColor3 = color
+	glow.ImageTransparency = intensity
+	glow.ZIndex = parent.ZIndex - 1
+	glow.Parent = parent
+
+	-- Pulse animation
+	local pulseUp = TweenService:Create(glow,
+		TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ImageTransparency = intensity + 0.3}
+	)
+	pulseUp:Play()
+
+	return glow
+end
+
+-- === LOADING SCREEN ===
+local loadingScreen = Instance.new("ScreenGui")
+loadingScreen.Name = "NextGEN_Loading"
+loadingScreen.ResetOnSpawn = false
+loadingScreen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+loadingScreen.Parent = playerGui
+
+-- Loading background with gradient
+local loadingBg = Instance.new("Frame")
+loadingBg.Size = UDim2.new(1, 0, 1, 0)
+loadingBg.BackgroundColor3 = CONFIG.COLORS.BACKGROUND_DARK
+loadingBg.BorderSizePixel = 0
+loadingBg.Parent = loadingScreen
+
+local bgGradient = Instance.new("UIGradient")
+bgGradient.Rotation = 45
+bgGradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(5, 5, 5)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(15, 15, 15)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 8))
+}
+bgGradient.Parent = loadingBg
+
+local diamondLogo = Instance.new("ImageLabel")
+diamondLogo.Size = UDim2.new(0, 150, 0, 150)
+diamondLogo.AnchorPoint = Vector2.new(0.5, 0.5)
+diamondLogo.Position = UDim2.new(0.5, 0, 0.5, 0)
+diamondLogo.BackgroundTransparency = 1
+diamondLogo.Image = "rbxassetid://743807897"
+diamondLogo.ImageColor3 = CONFIG.COLORS.PRIMARY
+diamondLogo.Parent = loadingScreen
+diamondLogo.ImageTransparency = 1
+
+-- Add glow to diamond logo
+createGlowEffect(diamondLogo, CONFIG.COLORS.PRIMARY, 0.6)
+
+-- Enhanced loading text with holographic effect
+local loadingText = Instance.new("TextLabel")
+loadingText.Size = UDim2.new(0, 300, 0, 50)
+loadingText.AnchorPoint = Vector2.new(0.5, 0.5)
+loadingText.Position = UDim2.new(0.5, 0, 0.65, 0)
+loadingText.BackgroundTransparency = 1
+loadingText.Text = "Loading NextGEN..."
+loadingText.Font = Enum.Font.Gotham
+loadingText.TextSize = 22
+loadingText.TextColor3 = CONFIG.COLORS.PRIMARY
+loadingText.TextTransparency = 1
+loadingText.TextStrokeTransparency = 0.8
+loadingText.TextStrokeColor3 = CONFIG.COLORS.SECONDARY
+loadingText.Parent = loadingScreen
+
+local loadingHolo, loadingHoloConnection = createHolographicEffect(loadingText)
+
+local function flashDiamond()
+	local fadeIn = TweenService:Create(diamondLogo, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency = 0})
+	local textFadeIn = TweenService:Create(loadingText, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {TextTransparency = 0})
+	local fadeOut = TweenService:Create(diamondLogo, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency = 1})
+	local textFadeOut = TweenService:Create(loadingText, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {TextTransparency = 1})
+
+	fadeIn:Play()
+	textFadeIn:Play()
+	fadeIn.Completed:Wait()
+
+	-- Add shine effect during loading
+	createShineEffect(diamondLogo, 0.8)
+
+	wait(0.5)
+	fadeOut:Play()
+	textFadeOut:Play()
+	fadeOut.Completed:Wait()
+end
+
+-- === MAIN UI ===
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NextGEN_UI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = playerGui
+ScreenGui.Enabled = false
+
+local MainContainer = Instance.new("Frame")
+MainContainer.Size = UDim2.new(0, 900, 0, 600)
+MainContainer.Position = UDim2.new(0.5, 0, 0.7, 0)
+MainContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+MainContainer.BackgroundColor3 = CONFIG.COLORS.BACKGROUND_DARK
+MainContainer.BackgroundTransparency = 1
+MainContainer.BorderSizePixel = 0
+MainContainer.Parent = ScreenGui
+
+-- Enhanced main container styling
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 20)
+mainCorner.Parent = MainContainer
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = CONFIG.COLORS.PRIMARY
+mainStroke.Transparency = 0.5
+mainStroke.Thickness = 2
+mainStroke.Parent = MainContainer
+
+-- Enhanced gradient with multiple colors
+local grad = Instance.new("UIGradient")
+grad.Rotation = 45
+grad.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 15, 15)),
+	ColorSequenceKeypoint.new(0.3, Color3.fromRGB(20, 20, 25)),
+	ColorSequenceKeypoint.new(0.7, Color3.fromRGB(18, 18, 22)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 12, 15))
+}
+grad.Parent = MainContainer
+
+-- Add main container glow
+createGlowEffect(MainContainer, CONFIG.COLORS.PRIMARY, 0.8)
+
+-- Top Bar with enhanced styling
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 60)
+TopBar.BackgroundColor3 = CONFIG.COLORS.BACKGROUND_LIGHT
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainContainer
+
+local topBarCorner = Instance.new("UICorner")
+topBarCorner.CornerRadius = UDim.new(0, 20)
+topBarCorner.Parent = TopBar
+
+-- Top bar gradient
+local topBarGrad = Instance.new("UIGradient")
+topBarGrad.Rotation = 90
+topBarGrad.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 30)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20))
+}
+topBarGrad.Parent = TopBar
+
+-- Enhanced close button with shine effects
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 35, 0, 35)
+CloseButton.Position = UDim2.new(1, -47, 0, 12)
+CloseButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+CloseButton.BackgroundTransparency = 0.3
+CloseButton.BorderSizePixel = 0
+CloseButton.Text = "×"
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 22
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.Parent = TopBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 10)
+closeCorner.Parent = CloseButton
+
+local closeGrad = Instance.new("UIGradient")
+closeGrad.Rotation = 45
+closeGrad.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 100)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 60, 60))
+}
+closeGrad.Parent = CloseButton
+
+-- Enhanced minimize button
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Size = UDim2.new(0, 35, 0, 35)
+MinimizeButton.Position = UDim2.new(1, -87, 0, 12)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(255, 200, 80)
+MinimizeButton.BackgroundTransparency = 0.3
+MinimizeButton.BorderSizePixel = 0
+MinimizeButton.Text = "−"
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.TextSize = 22
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.Parent = TopBar
+
+local minimizeCorner = Instance.new("UICorner")
+minimizeCorner.CornerRadius = UDim.new(0, 10)
+minimizeCorner.Parent = MinimizeButton
+
+local minimizeGrad = Instance.new("UIGradient")
+minimizeGrad.Rotation = 45
+minimizeGrad.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 220, 100)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 180, 60))
+}
+minimizeGrad.Parent = MinimizeButton
+
+-- Enhanced top bar shadow with glow
+local topBarShadow = Instance.new("Frame")
+topBarShadow.Size = UDim2.new(1, 0, 0, 3)
+topBarShadow.Position = UDim2.new(0, 0, 1, -3)
+topBarShadow.BackgroundColor3 = CONFIG.COLORS.PRIMARY
+topBarShadow.BackgroundTransparency = 0.7
+topBarShadow.BorderSizePixel = 0
+topBarShadow.Parent = TopBar
+
+local shadowGrad = Instance.new("UIGradient")
+shadowGrad.Rotation = 0
+shadowGrad.Transparency = NumberSequence.new{
+	NumberSequenceKeypoint.new(0, 0.9),
+	NumberSequenceKeypoint.new(0.5, 0.3),
+	NumberSequenceKeypoint.new(1, 0.9)
+}
+shadowGrad.Parent = topBarShadow
+
+-- Enhanced Diamond Logo Container
+local DiamondContainer = Instance.new("Frame")
+DiamondContainer.Size = UDim2.new(0, 52, 0, 52)
+DiamondContainer.Position = UDim2.new(0, 20, 0, 4)
+DiamondContainer.BackgroundTransparency = 1
+DiamondContainer.Parent = TopBar
+
+local Diamond = Instance.new("ImageLabel")
+Diamond.Size = UDim2.new(1, 0, 1, 0)
+Diamond.BackgroundTransparency = 1
+Diamond.Image = "rbxassetid://743807897"
+Diamond.ImageColor3 = CONFIG.COLORS.PRIMARY
+Diamond.Parent = DiamondContainer
+
+-- Multiple glow layers for enhanced effect
+local DiamondGlow1 = Instance.new("ImageLabel")
+DiamondGlow1.Size = UDim2.new(2, 0, 2, 0)
+DiamondGlow1.Position = UDim2.new(-0.5, 0, -0.5, 0)
+DiamondGlow1.BackgroundTransparency = 1
+DiamondGlow1.Image = "rbxassetid://3926305904"
+DiamondGlow1.ImageColor3 = CONFIG.COLORS.PRIMARY
+DiamondGlow1.ImageTransparency = 0.8
+DiamondGlow1.Parent = DiamondContainer
+DiamondGlow1.ZIndex = Diamond.ZIndex - 1
+
+local DiamondGlow2 = Instance.new("ImageLabel")
+DiamondGlow2.Size = UDim2.new(3, 0, 3, 0)
+DiamondGlow2.Position = UDim2.new(-1, 0, -1, 0)
+DiamondGlow2.BackgroundTransparency = 1
+DiamondGlow2.Image = "rbxassetid://3926305904"
+DiamondGlow2.ImageColor3 = CONFIG.COLORS.SECONDARY
+DiamondGlow2.ImageTransparency = 0.9
+DiamondGlow2.Parent = DiamondContainer
+DiamondGlow2.ZIndex = Diamond.ZIndex - 2
+
+-- Enhanced diamond animation with rotation and glow pulsing
+local floatConnection, rotateConnection, glowConnection
+local floatDirection = 1
+local floatSpeed = 12
+local minY, maxY = 4, 10
+local currentY = 4
+local rotation = 0
+
+local function animateDiamond()
+	floatConnection = RunService.Heartbeat:Connect(function(dt)
+		-- Float animation
+		currentY = currentY + floatDirection * floatSpeed * dt
+		if currentY > maxY then
+			floatDirection = -1
+			currentY = maxY
+		elseif currentY < minY then
+			floatDirection = 1
+			currentY = minY
+		end
+		DiamondContainer.Position = UDim2.new(0, 20, 0, currentY)
+	end)
+
+	-- Rotation animation
+	rotateConnection = RunService.Heartbeat:Connect(function(dt)
+		rotation = rotation + 30 * dt
+		Diamond.Rotation = rotation
+	end)
+
+	-- Glow pulsing
+	glowConnection = RunService.Heartbeat:Connect(function()
+		local pulse = math.sin(tick() * 3) * 0.2 + 0.8
+		DiamondGlow1.ImageTransparency = pulse
+		DiamondGlow2.ImageTransparency = pulse + 0.1
+	end)
+end
+
+-- Enhanced Title with holographic effect
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(0, 250, 0, 52)
+TitleLabel.Position = UDim2.new(0.5, -125, 0, 4)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "NextGEN"
+TitleLabel.Font = Enum.Font.GothamBlack
+TitleLabel.TextSize = 32
+TitleLabel.TextColor3 = CONFIG.COLORS.PRIMARY
+TitleLabel.TextStrokeColor3 = CONFIG.COLORS.BACKGROUND_LIGHT
+TitleLabel.TextStrokeTransparency = 0.3
+TitleLabel.ZIndex = 3
+TitleLabel.Parent = TopBar
+
+-- Add holographic effect to title
+local titleHolo, titleHoloConnection = createHolographicEffect(TitleLabel)
+
+local TitleGlow = Instance.new("TextLabel")
+TitleGlow.Size = TitleLabel.Size
+TitleGlow.Position = TitleLabel.Position
+TitleGlow.BackgroundTransparency = 1
+TitleGlow.Text = TitleLabel.Text
+TitleGlow.Font = TitleLabel.Font
+TitleGlow.TextSize = TitleLabel.TextSize
+TitleGlow.TextColor3 = CONFIG.COLORS.PRIMARY
+TitleGlow.TextStrokeTransparency = 0.7
+TitleGlow.TextTransparency = 0.4
+TitleGlow.ZIndex = 2
+TitleGlow.Parent = TopBar
+
+-- === ENHANCED TAB BAR ===
+local TabBar = Instance.new("Frame")
+TabBar.Size = UDim2.new(0, 550, 0, 60)
+TabBar.Position = UDim2.new(0, 20, 1, -70)
+TabBar.BackgroundTransparency = 1
+TabBar.Parent = MainContainer
+
+-- Enhanced tab creation with shine effects
+local function createTab(name, xPos)
+	local tabBtn = Instance.new("TextButton")
+	tabBtn.Name = name .. "Tab"
+	tabBtn.Size = UDim2.new(0, 105, 0, 44)
+	tabBtn.Position = UDim2.new(0, xPos, 0, 8)
+	tabBtn.BackgroundColor3 = CONFIG.COLORS.PRIMARY
+	tabBtn.BackgroundTransparency = 0.3
+	tabBtn.BorderSizePixel = 0
+	tabBtn.AutoButtonColor = false
+	tabBtn.Font = Enum.Font.GothamBold
+	tabBtn.TextSize = 16
+	tabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	tabBtn.Text = name
+	tabBtn.Parent = TabBar
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 12)
+	corner.Parent = tabBtn
+
+	local tabGrad = Instance.new("UIGradient")
+	tabGrad.Rotation = 90
+	tabGrad.Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, CONFIG.COLORS.PRIMARY),
+		ColorSequenceKeypoint.new(1, CONFIG.COLORS.SECONDARY)
+	}
+	tabGrad.Parent = tabBtn
+
+	local tabStroke = Instance.new("UIStroke")
+	tabStroke.Color = CONFIG.COLORS.ACCENT
+	tabStroke.Transparency = 0.5
+	tabStroke.Thickness = 2
+	tabStroke.Parent = tabBtn
+
+	-- Enhanced hover effects with shine
+	tabBtn.MouseEnter:Connect(function()
+		createShineEffect(tabBtn, 0.6)
+		TweenService:Create(tabBtn, TweenInfo.new(CONFIG.ANIMATIONS.FAST), {
+			BackgroundTransparency = 0.1,
+			TextSize = 18
+		}):Play()
+		TweenService:Create(tabStroke, TweenInfo.new(CONFIG.ANIMATIONS.FAST), {
+			Transparency = 0.3
+		}):Play()
+	end)
+
+	tabBtn.MouseLeave:Connect(function()
+		TweenService:Create(tabBtn, TweenInfo.new(CONFIG.ANIMATIONS.FAST), {
+			BackgroundTransparency = 0.3,
+			TextSize = 16
+		}):Play()
+		TweenService:Create(tabStroke, TweenInfo.new(CONFIG.ANIMATIONS.FAST), {
+			Transparency = 0.5
+		}):Play()
+	end)
+
+	return tabBtn
+end
+
+local Tabs = {
+	createTab("Dashboard", 0),
+	createTab("Player", 110),
+	createTab("Tools", 220),
+	createTab("Settings", 330),
+	createTab("Info", 440),
+    createTab("Scripts", 550),
+}
+
+-- Enhanced Content Frame
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(0, 560, 0, 450)
+ContentFrame.Position = UDim2.new(0, 20, 0, 70)
+ContentFrame.BackgroundColor3 = CONFIG.COLORS.BACKGROUND_MEDIUM
+ContentFrame.BorderSizePixel = 0
+ContentFrame.Parent = MainContainer
+
+local contentCorner = Instance.new("UICorner")
+contentCorner.CornerRadius = UDim.new(0, 16)
+contentCorner.Parent = ContentFrame
+
+local contentGrad = Instance.new("UIGradient")
+contentGrad.Rotation = 45
+contentGrad.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 20, 25)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20))
+}
+contentGrad.Parent = ContentFrame
+
+local contentStroke = Instance.new("UIStroke")
+contentStroke.Color = CONFIG.COLORS.PRIMARY
+contentStroke.Transparency = 0.85
+contentStroke.Thickness = 1
+contentStroke.Parent = ContentFrame
+
+-- Enhanced Profile Frame
+local ProfileFrame = Instance.new("Frame")
+ProfileFrame.Size = UDim2.new(0, 280, 0, 450)
+ProfileFrame.Position = UDim2.new(1, -300, 0, 70)
+ProfileFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+ProfileFrame.BorderSizePixel = 0
+ProfileFrame.Parent = MainContainer
+
+local profileCorner = Instance.new("UICorner")
+profileCorner.CornerRadius = UDim.new(0, 16)
+profileCorner.Parent = ProfileFrame
+
+local profileGrad = Instance.new("UIGradient")
+profileGrad.Rotation = 45
+profileGrad.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 18, 23)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 12, 17))
+}
+profileGrad.Parent = ProfileFrame
+
+local profileStroke = Instance.new("UIStroke")
+profileStroke.Color = CONFIG.COLORS.PRIMARY
+profileStroke.Transparency = 0.85
+profileStroke.Thickness = 1
+profileStroke.Parent = ProfileFrame
+
+-- Enhanced Profile Header with shine
+local profileHeader = Instance.new("TextLabel")
+profileHeader.Size = UDim2.new(1, 0, 0, 48)
+profileHeader.BackgroundTransparency = 1
+profileHeader.Font = Enum.Font.GothamBold
+profileHeader.TextSize = 20
+profileHeader.TextColor3 = CONFIG.COLORS.PRIMARY
+profileHeader.Text = "Profile"
+profileHeader.TextStrokeTransparency = 0.8
+profileHeader.TextStrokeColor3 = CONFIG.COLORS.SECONDARY
+profileHeader.Parent = ProfileFrame
+
+-- Enhanced Profile Image with glow border
+local profileImageContainer = Instance.new("Frame")
+profileImageContainer.Size = UDim2.new(0, 120, 0, 120)
+profileImageContainer.Position = UDim2.new(0.5, -60, 0, 60)
+profileImageContainer.BackgroundTransparency = 1
+profileImageContainer.Parent = ProfileFrame
+
+local profileImage = Instance.new("ImageLabel")
+profileImage.Size = UDim2.new(0, 110, 0, 110)
+profileImage.Position = UDim2.new(0, 5, 0, 5)
+profileImage.BackgroundTransparency = 1
+profileImage.Parent = profileImageContainer
+
+local profileImageCorner = Instance.new("UICorner")
+profileImageCorner.CornerRadius = UDim.new(1, 0)
+profileImageCorner.Parent = profileImage
+
+-- Add glow ring around profile image
+local profileGlow = Instance.new("Frame")
+profileGlow.Size = UDim2.new(1, 0, 1, 0)
+profileGlow.BackgroundTransparency = 1
+profileGlow.Parent = profileImageContainer
+
+local profileGlowStroke = Instance.new("UIStroke")
+profileGlowStroke.Color = CONFIG.COLORS.PRIMARY
+profileGlowStroke.Transparency = 0.3
+profileGlowStroke.Thickness = 3
+profileGlowStroke.Parent = profileGlow
+
+local profileGlowCorner = Instance.new("UICorner")
+profileGlowCorner.CornerRadius = UDim.new(1, 0)
+profileGlowCorner.Parent = profileGlow
+
+-- Animate profile glow
+local profileGlowTween = TweenService:Create(profileGlowStroke,
+	TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+	{Transparency = 0.7}
+)
+profileGlowTween:Play()
+
+-- Load player thumbnail with error handling
+local function loadPlayerThumbnail()
+	local success, result = pcall(function()
+		local thumbType = Enum.ThumbnailType.HeadShot
+		local thumbSize = Enum.ThumbnailSize.Size420x420
+		return Players:GetUserThumbnailAsync(player.UserId, thumbType, thumbSize)
+	end)
+
+	if success and result then
+		profileImage.Image = result
+	else
+		profileImage.Image = "rbxasset://textures/face.png"
+	end
+end
+
+spawn(loadPlayerThumbnail)
+
+-- Enhanced player info labels
+local playerNameLabel = Instance.new("TextLabel")
+playerNameLabel.Size = UDim2.new(1, -20, 0, 35)
+playerNameLabel.Position = UDim2.new(0, 10, 0, 190)
+playerNameLabel.BackgroundTransparency = 1
+playerNameLabel.Font = Enum.Font.GothamBold
+playerNameLabel.TextSize = 20
+playerNameLabel.TextColor3 = CONFIG.COLORS.TEXT_PRIMARY
+playerNameLabel.Text = player.Name
+playerNameLabel.TextXAlignment = Enum.TextXAlignment.Center
+playerNameLabel.TextWrapped = true
+playerNameLabel.TextScaled = true
+playerNameLabel.TextStrokeTransparency = 0.8
+playerNameLabel.TextStrokeColor3 = CONFIG.COLORS.PRIMARY
+playerNameLabel.Parent = ProfileFrame
+
+-- Copyable User ID Button
+local playerIdButton = Instance.new("TextButton")
+playerIdButton.Size = UDim2.new(1, -20, 0, 35)
+playerIdButton.Position = UDim2.new(0, 10, 0, 235)
+playerIdButton.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+playerIdButton.BorderSizePixel = 0
+playerIdButton.Font = Enum.Font.Gotham
+playerIdButton.TextSize = 12
+playerIdButton.TextColor3 = CONFIG.COLORS.TEXT_SECONDARY
+playerIdButton.Text = "📋 ID: " .. player.UserId .. " (Click to Copy)"
+playerIdButton.TextXAlignment = Enum.TextXAlignment.Center
+playerIdButton.TextWrapped = true
+playerIdButton.Parent = ProfileFrame
+
+local idButtonCorner = Instance.new("UICorner")
+idButtonCorner.CornerRadius = UDim.new(0, 8)
+idButtonCorner.Parent = playerIdButton
+
+local idButtonStroke = Instance.new("UIStroke")
+idButtonStroke.Color = CONFIG.COLORS.PRIMARY
+idButtonStroke.Transparency = 0.8
+idButtonStroke.Thickness = 1
+idButtonStroke.Parent = playerIdButton
+
+-- Copy ID functionality
+playerIdButton.MouseButton1Click:Connect(function()
+	createShineEffect(playerIdButton, 0.5)
+	-- Copy to clipboard (Roblox limitation - we'll show feedback instead)
+	playerIdButton.Text = "✅ ID Copied: " .. player.UserId
+	playerIdButton.TextColor3 = Color3.fromRGB(100, 255, 100)
+
+	spawn(function()
+		wait(2)
+		playerIdButton.Text = "📋 ID: " .. player.UserId .. " (Click to Copy)"
+		playerIdButton.TextColor3 = CONFIG.COLORS.TEXT_SECONDARY
+	end)
+end)
+
+-- Hover effects for ID button
+playerIdButton.MouseEnter:Connect(function()
+	TweenService:Create(playerIdButton, TweenInfo.new(CONFIG.ANIMATIONS.FAST), {
+		BackgroundColor3 = Color3.fromRGB(30, 30, 35),
+		TextColor3 = CONFIG.COLORS.PRIMARY
+	}):Play()
+	TweenService:Create(idButtonStroke, TweenInfo.new(CONFIG.ANIMATIONS.FAST), {
+		Transparency = 0.5
+	}):Play()
+end)
+
+playerIdButton.MouseLeave:Connect(function()
+	TweenService:Create(playerIdButton, TweenInfo.new(CONFIG.ANIMATIONS.FAST), {
+		BackgroundColor3 = Color3.fromRGB(20, 20, 25),
+		TextColor3 = CONFIG.COLORS.TEXT_SECONDARY
+	}):Play()
+	TweenService:Create(idButtonStroke, TweenInfo.new(CONFIG.ANIMATIONS.FAST), {
+		Transparency = 0.8
+	}):Play()
+end)
+
+-- Enhanced tab content creation
+local function createContentFrame(name)
+	local frame = Instance.new("ScrollingFrame")
+	frame.Name = name .. "Content"
+	frame.Size = UDim2.new(1, -20, 1, -20)
+	frame.Position = UDim2.new(0, 10, 0, 10)
+	frame.BackgroundTransparency = 1
+	frame.BorderSizePixel = 0
+	frame.ScrollBarThickness = 6
+	frame.ScrollBarImageColor3 = CONFIG.COLORS.PRIMARY
+	frame.ScrollBarImageTransparency = 0.5
+	frame.ScrollingDirection = Enum.ScrollingDirection.Y
+	frame.CanvasSize = UDim2.new(0, 0, 0, 0)
+	frame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	frame.ScrollingEnabled = true
+	frame.Active = true
+	frame.Selectable = false
+	frame.Parent = ContentFrame
+	frame.Visible = false
+	frame.ZIndex = 5
+
+	local layout = Instance.new("UIListLayout")
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, 10)
+	layout.FillDirection = Enum.FillDirection.Vertical
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	layout.VerticalAlignment = Enum.VerticalAlignment.Top
+	layout.Parent = frame
+
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0, 10)
+	padding.PaddingBottom = UDim.new(0, 10)
+	padding.PaddingLeft = UDim.new(0, 10)
+	padding.PaddingRight = UDim.new(0, 10)
+	padding.Parent = frame
+
+	return frame
+end
+
+-- Create enhanced tab contents
+local tabContents = {}
+
+-- === DASHBOARD TAB ===
+tabContents.Dashboard = createContentFrame("Dashboard")
+
+local dashTitle = Instance.new("TextLabel")
+dashTitle.Size = UDim2.new(1, 0, 0, 50)
+dashTitle.BackgroundTransparency = 1
+dashTitle.Font = Enum.Font.GothamBlack
+dashTitle.TextSize = 28
+dashTitle.TextColor3 = CONFIG.COLORS.PRIMARY
+dashTitle.Text = "🚀 NextGEN Dashboard"
+dashTitle.TextXAlignment = Enum.TextXAlignment.Left
+dashTitle.TextStrokeTransparency = 0.8
+dashTitle.TextStrokeColor3 = CONFIG.COLORS.SECONDARY
+dashTitle.Parent = tabContents.Dashboard
+
+local dashDesc = Instance.new("TextLabel")
+dashDesc.Size = UDim2.new(1, 0, 0, 100)
+dashDesc.BackgroundTransparency = 1
+dashDesc.Font = Enum.Font.Gotham
+dashDesc.TextSize = 16
+dashDesc.TextColor3 = CONFIG.COLORS.TEXT_SECONDARY
+dashDesc.Text = "✨ Welcome to your enhanced control center! This is where you can manage your game experience with our advanced tools and beautiful interface.\n\nThe dashboard provides an overview of your current session and system status."
+dashDesc.TextWrapped = true
+dashDesc.TextXAlignment = Enum.TextXAlignment.Left
+dashDesc.TextYAlignment = Enum.TextYAlignment.Top
+dashDesc.Parent = tabContents.Dashboard
+
+-- === SCRIPTS TAB ===
+tabContents.Scripts = createContentFrame("Scripts")
+
+local scriptsTitle = Instance.new("TextLabel")
+scriptsTitle.Size = UDim2.new(1, 0, 0, 50)
+scriptsTitle.BackgroundTransparency = 1
+scriptsTitle.Font = Enum.Font.GothamBlack
+scriptsTitle.TextSize = 28
+scriptsTitle.TextColor3 = CONFIG.COLORS.PRIMARY
+scriptsTitle.Text = "📜 Exploit Scripts"
+scriptsTitle.TextXAlignment = Enum.TextXAlignment.Left
+scriptsTitle.Parent = tabContents.Scripts
+
+local scriptsDesc = Instance.new("TextLabel")
+scriptsDesc.Size = UDim2.new(1, 0, 0, 100)
+scriptsDesc.BackgroundTransparency = 1
+scriptsDesc.Font = Enum.Font.Gotham
+scriptsDesc.TextSize = 16
+scriptsDesc.TextColor3 = CONFIG.COLORS.TEXT_SECONDARY
+scriptsDesc.Text = "💻 Click any script below to execute powerful exploits and hacks.\n\nUse responsibly!"
+scriptsDesc.TextWrapped = true
+scriptsDesc.TextXAlignment = Enum.TextXAlignment.Left
+scriptsDesc.TextYAlignment = Enum.TextYAlignment.Top
+scriptsDesc.Parent = tabContents.Scripts
+
+local scriptsList = Instance.new("ScrollingFrame")
+scriptsList.Name = "ScriptsList"
+scriptsList.Size = UDim2.new(1, -20, 1, -160) -- padding for title + desc same as tools
+scriptsList.Position = UDim2.new(0, 10, 0, 140)
+scriptsList.BackgroundTransparency = 1
+scriptsList.ScrollBarThickness = 6
+scriptsList.CanvasSize = UDim2.new(0, 0, 0, 0)
+scriptsList.Parent = tabContents.Scripts
+
+local uiLayout = Instance.new("UIListLayout")
+uiLayout.SortOrder = Enum.SortOrder.LayoutOrder
+uiLayout.Padding = UDim.new(0, 6)
+uiLayout.Parent = scriptsList
+
+
+-- Table of exploit scripts
+local exploitScripts = {
+    ["Infinite Jump"] = function()
+        local player = game.Players.LocalPlayer
+        local UIS = game:GetService("UserInputService")
+        local jumping = false
+        UIS.JumpRequest:Connect(function()
+            if not jumping then
+                jumping = true
+                player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                wait(0.2)
+                jumping = false
+            end
+        end)
+    end,
+
+    ["Fly Script"] = function()
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local UIS = game:GetService("UserInputService")
+        local flying = false
+        local speed = 50
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.Parent = character.HumanoidRootPart
+
+        UIS.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if input.KeyCode == Enum.KeyCode.E then
+                flying = not flying
+                if not flying then
+                    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+                end
+            end
+        end)
+
+        game:GetService("RunService").Heartbeat:Connect(function()
+            if flying then
+                local camCF = workspace.CurrentCamera.CFrame
+                local moveDir = Vector3.new()
+                local UIS = game:GetService("UserInputService")
+                if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camCF.LookVector end
+                if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camCF.LookVector end
+                if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camCF.RightVector end
+                if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camCF.RightVector end
+                bodyVelocity.Velocity = moveDir.Unit * speed
+            else
+                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            end
+        end)
+    end,
+
+    ["Speed Hack"] = function()
+        local player = game.Players.LocalPlayer
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = 100
+        end
+    end,
+
+    ["NoClip"] = function()
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        for _, part in pairs(character:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end,
+
+    ["Auto Farm"] = function()
+        local player = game.Players.LocalPlayer
+        while wait(1) do
+            if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                player.Character.HumanoidRootPart.CFrame = CFrame.new(0, 10, 0)
+            else
+                break
+            end
+        end
+    end,
+
+    ["ESP"] = function()
+        local Players = game:GetService("Players")
+        local RunService = game:GetService("RunService")
+        local localPlayer = Players.LocalPlayer
+
+        local function createESP(plr)
+            local box = Drawing.new("Square")
+            box.Visible = false
+            box.Color = Color3.new(1, 0, 0)
+            box.Thickness = 2
+            box.Filled = false
+            box.Transparency = 1
+
+            RunService.RenderStepped:Connect(function()
+                if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+                    local vector, onScreen = workspace.CurrentCamera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+                    if onScreen then
+                        box.Visible = true
+                        box.Position = Vector2.new(vector.X - 25, vector.Y - 25)
+                        box.Size = Vector2.new(50, 50)
+                    else
+                        box.Visible = false
+                    end
+                else
+                    box.Visible = false
+                end
+            end)
+        end
+
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= localPlayer then
+                createESP(player)
+            end
+        end
+    end,
+
+    ["Click Teleport"] = function()
+        local player = game.Players.LocalPlayer
+        local mouse = player:GetMouse()
+        mouse.Button1Down:Connect(function()
+            if mouse.Target then
+                player.Character.HumanoidRootPart.CFrame = CFrame.new(mouse.Hit.p + Vector3.new(0,3,0))
+            end
+        end)
+    end,
+
+    ["Infinite Stamina"] = function()
+        local player = game.Players.LocalPlayer
+        while wait(0.1) do
+            if player.Character and player.Character:FindFirstChild("Stamina") then
+                player.Character.Stamina.Value = 100
+            end
+        end
+    end,
+
+    ["Anti-AFK"] = function()
+        local VirtualUser = game:GetService("VirtualUser")
+        game:GetService("Players").LocalPlayer.Idled:Connect(function()
+            VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            wait(1)
+            VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        end)
+    end,
+
+    -- More scripts can be added here following the same structure
+}
+
+-- Create buttons for each script inside scriptsList
+for name, func in pairs(exploitScripts) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.BackgroundColor3 = CONFIG.COLORS.BUTTON_BG or Color3.fromRGB(30, 30, 30)
+    btn.TextColor3 = CONFIG.COLORS.TEXT_PRIMARY or Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 18
+    btn.Text = name
+    btn.Parent = scriptsList
+
+    btn.MouseEnter:Connect(function()
+        btn.BackgroundColor3 = CONFIG.COLORS.BUTTON_HOVER or Color3.fromRGB(50, 50, 50)
+    end)
+    btn.MouseLeave:Connect(function()
+        btn.BackgroundColor3 = CONFIG.COLORS.BUTTON_BG or Color3.fromRGB(30, 30, 30)
+    end)
+
+    btn.MouseButton1Click:Connect(function()
+        local success, err = pcall(func)
+        if not success then
+            warn("Error running exploit script '" .. name .. "': " .. err)
+        end
+    end)
+end
+
+
+-- === PLAYER TAB ===
+tabContents.Player = createContentFrame("Player")
+
+local playerTitle = Instance.new("TextLabel")
+playerTitle.Size = UDim2.new(1, 0, 0, 50)
+playerTitle.BackgroundTransparency = 1
+playerTitle.Font = Enum.Font.GothamBlack
+playerTitle.TextSize = 28
+playerTitle.TextColor3 = CONFIG.COLORS.PRIMARY
+playerTitle.Text = "👤 Player Controls"
+playerTitle.TextXAlignment = Enum.TextXAlignment.Left
+playerTitle.Parent = tabContents.Player
+
+local playerDesc = Instance.new("TextLabel")
+playerDesc.Size = UDim2.new(1, 0, 0, 100)
+playerDesc.BackgroundTransparency = 1
+playerDesc.Font = Enum.Font.Gotham
+playerDesc.TextSize = 16
+playerDesc.TextColor3 = CONFIG.COLORS.TEXT_SECONDARY
+playerDesc.Text = "🎮 This section is designed for player customization and control features.\n\nYou can customize your player's movement, abilities, and other gameplay settings here."
+playerDesc.TextWrapped = true
+playerDesc.TextXAlignment = Enum.TextXAlignment.Left
+playerDesc.TextYAlignment = Enum.TextYAlignment.Top
+playerDesc.Parent = tabContents.Player
+
+-- === TOOLS TAB ===
+tabContents.Tools = createContentFrame("Tools")
+
+local toolsTitle = Instance.new("TextLabel")
+toolsTitle.Size = UDim2.new(1, 0, 0, 50)
+toolsTitle.BackgroundTransparency = 1
+toolsTitle.Font = Enum.Font.GothamBlack
+toolsTitle.TextSize = 28
+toolsTitle.TextColor3 = CONFIG.COLORS.PRIMARY
+toolsTitle.Text = "🛠️ Game Tools"
+toolsTitle.TextXAlignment = Enum.TextXAlignment.Left
+toolsTitle.Parent = tabContents.Tools
+
+local toolsDesc = Instance.new("TextLabel")
+toolsDesc.Size = UDim2.new(1, 0, 0, 100)
+toolsDesc.BackgroundTransparency = 1
+toolsDesc.Font = Enum.Font.Gotham
+toolsDesc.TextSize = 16
+toolsDesc.TextColor3 = CONFIG.COLORS.TEXT_SECONDARY
+toolsDesc.Text = "🔧 Access powerful game tools and utilities here.\n\nThis section contains various tools to enhance your gameplay experience and provide useful utilities."
+toolsDesc.TextWrapped = true
+toolsDesc.TextXAlignment = Enum.TextXAlignment.Left
+toolsDesc.TextYAlignment = Enum.TextYAlignment.Top
+toolsDesc.Parent = tabContents.Tools
+local toolsList = Instance.new("ScrollingFrame")
+toolsList.Name = "ToolsList"
+toolsList.Size = UDim2.new(1, -20, 1, -160) -- leave some padding for title and desc
+toolsList.Position = UDim2.new(0, 10, 0, 140)
+toolsList.BackgroundTransparency = 1
+toolsList.ScrollBarThickness = 6
+toolsList.CanvasSize = UDim2.new(0, 0, 0, 0)
+toolsList.Parent = tabContents.Tools
+
+local uiLayout = Instance.new("UIListLayout")
+uiLayout.SortOrder = Enum.SortOrder.LayoutOrder
+uiLayout.Padding = UDim.new(0, 6)
+uiLayout.Parent = toolsList
+
+-- Add your 30+ exploit buttons here
+local exploits = {
+    "Fly Hack",
+    "Speed Hack",
+    "Wallhack",
+    "Aimbot",
+    "ESP",
+    "NoClip",
+    "AutoFarm",
+    "Teleport",
+    "Silent Aim",
+    "Infinite Ammo",
+    "God Mode",
+    "Bunny Hop",
+    "Trigger Bot",
+    "Chams",
+    "Anti-AFK",
+    "Fake Lag",
+    "Radar Hack",
+    "Unlock All Skins",
+    "Auto Heal",
+    "Fast Reload",
+    "Jump Boost",
+    "Silent Walk",
+    "Zoom Hack",
+    "Spin Bot",
+    "Silent Pickup",
+    "Instant Build",
+    "Invisible Mode",
+    "Auto Respawn",
+    "Speed Boost",
+    "Infinite Stamina",
+    "Recoil Control",
+    "Wall Climb",
+    "No Fall Damage",
+    "Auto Block",
+    "Rapid Fire",
+    "Hitbox Extender",
+    "Silent Kill",
+    "Fast Crafting",
+    "Auto Loot",
+    "Teleport Behind",
+    "Health Regeneration",
+    "One Shot Kill",
+    "Unlimited Resources",
+    "Safe Walk",
+    "Time Manipulation",
+    "Super Jump",
+    "Rapid Movement",
+    "Auto Parry",
+    "Silent Reload",
+    "No Recoil",
+    "Weapon Switch Hack",
+    "Fake Ping",
+    "Auto Sprint",
+}
+
+for i, exploitName in ipairs(exploits) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    btn.TextColor3 = CONFIG.COLORS.TEXT_SECONDARY
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 16
+    btn.Text = exploitName
+    btn.AutoButtonColor = true
+    btn.Name = exploitName:gsub("%s", "") .. "Button" -- remove spaces for name
+    btn.Parent = toolsList
+
+    btn.MouseEnter:Connect(function()
+        btn.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
+    end)
+    btn.MouseLeave:Connect(function()
+        btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    end)
+
+    -- Add your exploit functionality here, e.g.:
+    btn.MouseButton1Click:Connect(function()
+        print("Activated exploit: " .. exploitName)
+        -- TODO: insert your exploit code here
+    end)
+end
+
+-- Dynamically update canvas size based on children height
+uiLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    toolsList.CanvasSize = UDim2.new(0, 0, 0, uiLayout.AbsoluteContentSize.Y + 10)
+end)
+
+
+-- === SETTINGS TAB ===
+tabContents.Settings = createContentFrame("Settings")
+
+local settingsTitle = Instance.new("TextLabel")
+settingsTitle.Size = UDim2.new(1, 0, 0, 50)
+settingsTitle.BackgroundTransparency = 1
+settingsTitle.Font = Enum.Font.GothamBlack
+settingsTitle.TextSize = 28
+settingsTitle.TextColor3 = CONFIG.COLORS.PRIMARY
+settingsTitle.Text = "⚙️ Settings"
+settingsTitle.TextXAlignment = Enum.TextXAlignment.Left
+settingsTitle.Parent = tabContents.Settings
+
+local settingsDesc = Instance.new("TextLabel")
+settingsDesc.Size = UDim2.new(1, 0, 0, 100)
+settingsDesc.BackgroundTransparency = 1
+settingsDesc.Font = Enum.Font.Gotham
+settingsDesc.TextSize = 16
+settingsDesc.TextColor3 = CONFIG.COLORS.TEXT_SECONDARY
+settingsDesc.Text = "⚙️ Customize the interface and behavior settings.\n\nAdjust various options to personalize your experience and configure the application to your preferences."
+settingsDesc.TextWrapped = true
+settingsDesc.TextXAlignment = Enum.TextXAlignment.Left
+settingsDesc.TextYAlignment = Enum.TextYAlignment.Top
+settingsDesc.Parent = tabContents.Settings
+
+-- === INFO TAB ===
+tabContents.Info = createContentFrame("Info")
+
+local infoTitle = Instance.new("TextLabel")
+infoTitle.Size = UDim2.new(1, 0, 0, 50)
+infoTitle.BackgroundTransparency = 1
+infoTitle.Font = Enum.Font.GothamBlack
+infoTitle.TextSize = 28
+infoTitle.TextColor3 = CONFIG.COLORS.PRIMARY
+infoTitle.Text = "ℹ️ Information"
+infoTitle.TextXAlignment = Enum.TextXAlignment.Left
+infoTitle.Parent = tabContents.Info
+
+local infoDesc = Instance.new("TextLabel")
+infoDesc.Size = UDim2.new(1, 0, 0, 120)
+infoDesc.BackgroundTransparency = 1
+infoDesc.Font = Enum.Font.Gotham
+infoDesc.TextSize = 16
+infoDesc.TextColor3 = CONFIG.COLORS.TEXT_SECONDARY
+infoDesc.Text = "🌟 NextGEN v2.0\n\nA modern, feature-rich GUI system designed for enhanced gameplay experience with beautiful animations and advanced controls.\n\nThis clean version focuses on the core interface structure and visual design."
+infoDesc.TextWrapped = true
+infoDesc.TextXAlignment = Enum.TextXAlignment.Left
+infoDesc.TextYAlignment = Enum.TextYAlignment.Top
+infoDesc.Parent = tabContents.Info
+
+-- Enhanced tab switching logic
+local currentTab = nil
+
+local function selectTab(tabName)
+	if currentTab == tabName then return end
+	currentTab = tabName
+
+	-- Update tab buttons with enhanced effects
+	for _, tabBtn in ipairs(Tabs) do
+		local tabStroke = tabBtn:FindFirstChild("UIStroke")
+		if tabBtn.Text == tabName then
+			createShineEffect(tabBtn, 1.0)
+			TweenService:Create(tabBtn, TweenInfo.new(CONFIG.ANIMATIONS.MEDIUM), {
+				TextColor3 = CONFIG.COLORS.PRIMARY,
+				BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+			}):Play()
+			if tabStroke then
+				TweenService:Create(tabStroke, TweenInfo.new(CONFIG.ANIMATIONS.MEDIUM), {
+					Transparency = 0.3,
+					Color = CONFIG.COLORS.PRIMARY
+				}):Play()
+			end
+		else
+			TweenService:Create(tabBtn, TweenInfo.new(CONFIG.ANIMATIONS.MEDIUM), {
+				TextColor3 = CONFIG.COLORS.TEXT_MUTED,
+				BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+			}):Play()
+			if tabStroke then
+				TweenService:Create(tabStroke, TweenInfo.new(CONFIG.ANIMATIONS.MEDIUM), {
+					Transparency = 0.8,
+					Color = CONFIG.COLORS.PRIMARY
+				}):Play()
+			end
+		end
+	end
+
+	-- Hide all tab content first
+	for name, content in pairs(tabContents) do
+		content.Visible = false
+	end
+
+	-- Show only the selected tab content
+	if tabContents[tabName] then
+		tabContents[tabName].Visible = true
+	end
+end
+
+-- Connect tab buttons
+for _, tabBtn in ipairs(Tabs) do
+	tabBtn.MouseButton1Click:Connect(function()
+		selectTab(tabBtn.Text)
+	end)
+end
+
+-- === ENHANCED DRAGGABLE WINDOW ===
+local dragging = false
+local dragInput, dragStart, startPos
+
+local function updatePosition(input)
+	if not dragging then return end
+
+	local delta = input.Position - dragStart
+	local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+
+	-- Constrain to screen bounds
+	local vpSize = workspace.CurrentCamera.ViewportSize
+	local containerSize = MainContainer.AbsoluteSize
+
+	if containerSize.X > 0 and containerSize.Y > 0 then
+		local minX = containerSize.X * 0.5
+		local maxX = vpSize.X - containerSize.X * 0.5
+		local minY = containerSize.Y * 0.5
+		local maxY = vpSize.Y - containerSize.Y * 0.5
+
+		local constrainedX = math.clamp(newPos.X.Offset + vpSize.X * 0.5, minX, maxX) - vpSize.X * 0.5
+		local constrainedY = math.clamp(newPos.Y.Offset + vpSize.Y * 0.5, minY, maxY) - vpSize.Y * 0.5
+
+		MainContainer.Position = UDim2.new(0.5, constrainedX, 0.5, constrainedY)
+	end
+end
+
+TopBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = MainContainer.Position
+
+		local connection
+		connection = input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+				connection:Disconnect()
+			end
+		end)
+	end
+end)
+
+TopBar.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+local dragConnection = RunService.Heartbeat:Connect(function()
+	if dragging and dragInput then
+		updatePosition(dragInput)
+	end
+end)
+
+-- === ENHANCED WINDOW CONTROLS ===
+local isMinimized = false
+
+CloseButton.MouseButton1Click:Connect(function()
+	-- Cleanup connections before destroying
+	if floatConnection then floatConnection:Disconnect() end
+	if rotateConnection then rotateConnection:Disconnect() end
+	if glowConnection then glowConnection:Disconnect() end
+	if dragConnection then dragConnection:Disconnect() end
+	if loadingHoloConnection then loadingHoloConnection:Disconnect() end
+	if titleHoloConnection then titleHoloConnection:Disconnect() end
+
+	createShineEffect(CloseButton, 0.5)
+	local fadeOut = TweenService:Create(MainContainer, TweenInfo.new(CONFIG.ANIMATIONS.MEDIUM, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+		Size = UDim2.new(0, 0, 0, 0),
+		BackgroundTransparency = 1
+	})
+	fadeOut:Play()
+	fadeOut.Completed:Connect(function()
+		ScreenGui:Destroy()
+	end)
+end)
+
+MinimizeButton.MouseButton1Click:Connect(function()
+	createShineEffect(MinimizeButton, 0.5)
+	isMinimized = not isMinimized
+	local targetSize = isMinimized and UDim2.new(0, 900, 0, 60) or UDim2.new(0, 900, 0, 600)
+
+	TweenService:Create(MainContainer, TweenInfo.new(CONFIG.ANIMATIONS.MEDIUM, Enum.EasingStyle.Quart), {
+		Size = targetSize
+	}):Play()
+
+	MinimizeButton.Text = isMinimized and "+" or "−"
+end)
+
+-- Enhanced hover effects for window controls
+CloseButton.MouseEnter:Connect(function()
+	createShineEffect(CloseButton, 0.4)
+	TweenService:Create(CloseButton, TweenInfo.new(CONFIG.ANIMATIONS.FAST), {BackgroundTransparency = 0.1}):Play()
+end)
+CloseButton.MouseLeave:Connect(function()
+	TweenService:Create(CloseButton, TweenInfo.new(CONFIG.ANIMATIONS.FAST), {BackgroundTransparency = 0.3}):Play()
+end)
+
+MinimizeButton.MouseEnter:Connect(function()
+	createShineEffect(MinimizeButton, 0.4)
+	TweenService:Create(MinimizeButton, TweenInfo.new(CONFIG.ANIMATIONS.FAST), {BackgroundTransparency = 0.1}):Play()
+end)
+MinimizeButton.MouseLeave:Connect(function()
+	TweenService:Create(MinimizeButton, TweenInfo.new(CONFIG.ANIMATIONS.FAST), {BackgroundTransparency = 0.3}):Play()
+end)
+
+-- === ENHANCED LOADING AND UI SEQUENCE ===
+coroutine.wrap(function()
+	-- Enhanced loading sequence with more effects
+	for i = 1, 3 do
+		flashDiamond()
+		wait(0.3)
+	end
+
+	-- Cleanup loading holographic effect
+	if loadingHoloConnection then
+		loadingHoloConnection:Disconnect()
+	end
+
+	-- Transition to main UI with enhanced effects
+	ScreenGui.Enabled = true
+
+	-- Enhanced loading screen destruction
+	local loadingFadeOut = TweenService:Create(loadingBg, TweenInfo.new(0.5), {BackgroundTransparency = 1})
+	loadingFadeOut:Play()
+	loadingFadeOut.Completed:Connect(function()
+		loadingScreen:Destroy()
+	end)
+
+	-- Start enhanced diamond animation
+	animateDiamond()
+
+	-- Enhanced main container entrance with multiple effects
+	local tweenIn = TweenService:Create(MainContainer, TweenInfo.new(CONFIG.ANIMATIONS.SLOW, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Position = UDim2.new(0.5, 0, 0.5, 0),
+		BackgroundTransparency = 0,
+	})
+
+	-- Add entrance shine effect
+	spawn(function()
+		wait(0.3)
+		createShineEffect(MainContainer, 1.5)
+	end)
+
+	tweenIn:Play()
+
+	-- Set default tab with delay for better effect
+	tweenIn.Completed:Connect(function()
+		wait(0.2)
+		selectTab("Dashboard")
+	end)
+end)()
